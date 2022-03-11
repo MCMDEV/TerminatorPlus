@@ -1,6 +1,7 @@
 package net.nuggetmc.tplus.bot;
 
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.nuggetmc.tplus.TerminatorPlus;
 import net.nuggetmc.tplus.bot.agent.Agent;
 import net.nuggetmc.tplus.bot.agent.legacyagent.LegacyAgent;
 import net.nuggetmc.tplus.bot.agent.legacyagent.ai.NeuralNetwork;
@@ -13,6 +14,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
@@ -41,7 +43,7 @@ public class BotManager implements Listener {
 
     public void add(Bot bot) {
         if (joinMessages) {
-            Bukkit.broadcastMessage(ChatColor.YELLOW + (bot.getName() + " joined the game"));
+            Bukkit.broadcastMessage(ChatColor.YELLOW + (bot.getBotName() + " joined the game"));
         }
 
         bots.add(bot);
@@ -49,7 +51,7 @@ public class BotManager implements Listener {
 
     public Bot getFirst(String name) {
         for (Bot bot : bots) {
-            if (name.equals(bot.getName())) {
+            if (name.equals(bot.getBotName())) {
                 return bot;
             }
         }
@@ -58,7 +60,7 @@ public class BotManager implements Listener {
     }
 
     public List<String> fetchNames() {
-        return bots.stream().map(Bot::getName).map(component -> component.getString()).collect(Collectors.toList());
+        return bots.stream().map(Bot::getBotName).collect(Collectors.toList());
     }
 
     public Agent getAgent() {

@@ -22,6 +22,8 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -32,9 +34,6 @@ import net.nuggetmc.tplus.bot.event.BotDamageByPlayerEvent;
 import net.nuggetmc.tplus.bot.event.BotFallDamageEvent;
 import net.nuggetmc.tplus.bot.event.BotKilledByPlayerEvent;
 import net.nuggetmc.tplus.utils.*;
-import org.bukkit.Material;
-import org.bukkit.SoundCategory;
-import org.bukkit.World;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -46,7 +45,6 @@ import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitScheduler;
-import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
@@ -61,6 +59,7 @@ public class Bot extends ServerPlayer {
     private final BukkitScheduler scheduler;
     private final Agent agent;
 
+    private final String name;
     private NeuralNetwork network;
 
     public NeuralNetwork getNeuralNetwork() {
@@ -96,9 +95,10 @@ public class Bot extends ServerPlayer {
 
     private final Vector offset;
 
-    private Bot(MinecraftServer minecraftServer, ServerLevel worldServer, GameProfile profile) {
+    private Bot(MinecraftServer minecraftServer, ServerLevel worldServer, String name, GameProfile profile) {
         super(minecraftServer, worldServer, profile);
 
+        this.name = name;
         this.plugin = TerminatorPlus.getInstance();
         this.scheduler = Bukkit.getScheduler();
         this.agent = plugin.getManager().getAgent();
@@ -125,7 +125,7 @@ public class Bot extends ServerPlayer {
 
         CustomGameProfile profile = new CustomGameProfile(uuid, ChatUtils.trim16(name), skin);
 
-        Bot bot = new Bot(nmsServer, nmsWorld, profile);
+        Bot bot = new Bot(nmsServer, nmsWorld, name, profile);
 
         bot.connection = new ServerGamePacketListenerImpl(nmsServer, new Connection(PacketFlow.CLIENTBOUND) {
 
@@ -146,6 +146,10 @@ public class Bot extends ServerPlayer {
         TerminatorPlus.getInstance().getManager().add(bot);
 
         return bot;
+    }
+
+    public String getBotName() {
+        return name;
     }
 
     private void renderAll() {
@@ -236,9 +240,9 @@ public class Bot extends ServerPlayer {
 
     @Override
     public void tick() {
-        loadChunks();
-
         super.tick();
+
+        loadChunks();
 
         if (!isAlive()) return;
 
@@ -287,11 +291,16 @@ public class Bot extends ServerPlayer {
             for (int j = chunkPosition().z - 1; j <= chunkPosition().z + 1; j++) {
                 LevelChunk chunk = world.getChunk(i, j);
 
-                if (!chunk.loaded) {
+                if(!chunk.loaded)   {
                     chunk.loaded = true;
                 }
             }
         }
+    }
+
+    @Override
+    public boolean isAlwaysTicking() {
+        return true;
     }
 
     private void fireDamageCheck() {
@@ -334,8 +343,8 @@ public class Bot extends ServerPlayer {
     }
 
     public void setOnFirePackets(boolean onFire) {
-        //entityData.set(new EntityDataAccessor<>(0, EntityDataSerializers.BYTE), onFire ? (byte) 1 : (byte) 0);
-        //sendPacket(new ClientboundSetEntityDataPacket(getId(), entityData, false));
+        entityData.set(new EntityDataAccessor<>(0, EntityDataSerializers.BYTE), onFire ? (byte) 1 : (byte) 0);
+        sendPacket(new ClientboundSetEntityDataPacket(getId(), entityData, false));
     }
 
     public boolean isOnFire() {
@@ -385,7 +394,6 @@ public class Bot extends ServerPlayer {
     public void setShield(boolean enabled) {
         this.shield = enabled;
 
-        System.out.println("set shield");
         setItemOffhand(new org.bukkit.inventory.ItemStack(enabled ? Material.SHIELD : Material.AIR));
     }
 
@@ -702,21 +710,17 @@ public class Bot extends ServerPlayer {
 
     public void setItemOffhand(org.bukkit.inventory.ItemStack item) {
         setItem(item, EquipmentSlot.OFFHAND);
-        System.out.println("set offhand");
     }
 
     public void setItem(org.bukkit.inventory.ItemStack item, EquipmentSlot slot) {
         if (item == null) item = defaultItem;
 
-        System.out.println("set");
         if (slot == EquipmentSlot.MAINHAND) {
             getBukkitEntity().getInventory().setItemInMainHand(item);
         } else if (slot == EquipmentSlot.OFFHAND) {
             getBukkitEntity().getInventory().setItemInOffHand(item);
         }
 
-        System.out.println("slot = " + slot);
-        System.out.println("item = " + item);
         sendPacket(new ClientboundSetEquipmentPacket(getId(), new ArrayList<>(Collections.singletonList(
             new Pair<>(slot, CraftItemStack.asNMSCopy(item))
         ))));

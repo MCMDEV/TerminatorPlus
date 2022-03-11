@@ -2,6 +2,7 @@ package net.nuggetmc.tplus.bot.agent.legacyagent;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
+import net.minecraft.world.entity.PathfinderMob;
 import net.nuggetmc.tplus.bot.Bot;
 import net.nuggetmc.tplus.bot.BotManager;
 import net.nuggetmc.tplus.bot.agent.Agent;
@@ -17,14 +18,12 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.craftbukkit.v1_18_R1.entity.CraftPlayer;
-import org.bukkit.entity.Boat;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Mob;
-import org.bukkit.entity.Monster;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Consumer;
 import org.bukkit.util.Vector;
 
 import java.util.HashMap;
@@ -175,7 +174,9 @@ public class LegacyAgent extends Agent {
 
             if (checkFence(bot, loc.getBlock(), botPlayer)) return;
 
-            if (checkDown(bot, botPlayer, livingTarget.getLocation(), bothXZ)) return;
+            if(!bothXZ) {
+                if (checkDown(bot, botPlayer, livingTarget.getLocation(), bothXZ)) return;
+            }
 
             if ((withinTargetXZ || sameXZ) && checkUp(bot, livingTarget, botPlayer, target, withinTargetXZ)) return;
 
@@ -651,7 +652,6 @@ public class LegacyAgent extends Agent {
     }
 
     private boolean checkDown(Bot npc, Player player, Location loc, boolean c) { // possibly a looser check for c
-
         if (LegacyUtils.checkFreeSpace(npc.getLocation(), loc) || LegacyUtils.checkFreeSpace(player.getEyeLocation(), loc)) return false;
 
         if (c && npc.getLocation().getBlockY() > loc.getBlockY() + 1) {
@@ -1190,13 +1190,13 @@ public class LegacyAgent extends Agent {
             }
 
             case NEAREST_BOT_DIFFER: {
-                String name = bot.getName().getString();
+                String name = bot.getBotName();
 
                 for (Bot otherBot : manager.fetch()) {
                     if (bot != otherBot) {
                         Player player = otherBot.getBukkitEntity();
 
-                        if (!name.equals(otherBot.getName()) && validateCloserEntity(player, loc, result)) {
+                        if (!name.equals(otherBot.getBotName()) && validateCloserEntity(player, loc, result)) {
                             result = player;
                         }
                     }
@@ -1206,13 +1206,13 @@ public class LegacyAgent extends Agent {
             }
 
             case NEAREST_BOT_DIFFER_ALPHA: {
-                String name = bot.getName().getString().replaceAll("[^A-Za-z]+", "");
+                String name = bot.getBotName().replaceAll("[^A-Za-z]+", "");
 
                 for (Bot otherBot : manager.fetch()) {
                     if (bot != otherBot) {
                         Player player = otherBot.getBukkitEntity();
 
-                        if (!name.equals(otherBot.getName().getString().replaceAll("[^A-Za-z]+", "")) && validateCloserEntity(player, loc, result)) {
+                        if (!name.equals(otherBot.getBotName().replaceAll("[^A-Za-z]+", "")) && validateCloserEntity(player, loc, result)) {
                             result = player;
                         }
                     }
